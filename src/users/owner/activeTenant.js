@@ -1,6 +1,8 @@
-import { createModal, openModal } from '../../components/modal.js';
+import { confirmDialog, createModal, openModal } from '../../components/modal.js';
 import { ensureOwnerSidebarStyles, loadOwnerStylesheet, renderOwnerSidebar, updateListingCountsInSidebar } from './sidebarOwner.js';
 import { withMediaAccessToken } from '../../services/mediaAccess.js';
+import { renderBookingIdentityDocuments } from '../../services/bookingIdentity.js';
+import { showToast } from '../../components/toast.js';
 
 const API = window.DORMHIVE_API_URL ?? 'http://localhost:5000/api/v1';
 const apiBase = API.replace(/\/api\/v1\/?$/, '');
@@ -189,6 +191,7 @@ export async function renderActiveTenant(root = document.querySelector('#app')) 
             <div class="action-group">
               <button type="button" data-action="message" data-booking-id="${esc(String(entry.id ?? ''))}"><i class="bi bi-chat-dots mobile-action-icon" aria-hidden="true"></i>Message</button>
               <button type="button" data-action="lease" data-booking-id="${esc(String(entry.id ?? ''))}"><i class="bi bi-eye mobile-action-icon" aria-hidden="true"></i>View Lease</button>
+              <button type="button" data-action="end-stay" data-booking-id="${esc(String(entry.id ?? ''))}">Mark stay ended</button>
             </div>
           </td>
         </tr>`;
@@ -210,7 +213,7 @@ export async function renderActiveTenant(root = document.querySelector('#app')) 
     renderRows(searchInput.value);
   });
 
-  tbody.addEventListener('click', (event) => {
+  tbody.addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-action]');
     if (!button) return;
 
@@ -240,10 +243,38 @@ export async function renderActiveTenant(root = document.querySelector('#app')) 
             <p><strong>Move-out:</strong> ${esc(formatLeaseEnd(entry))}</p>
             <p><strong>Occupants:</strong> ${esc(String(entry.occupants ?? 1))}</p>
             <p><strong>Rent:</strong> ${esc(entry.monthly_rent ? `₱${Number(entry.monthly_rent).toLocaleString('en-US')}` : '—')}</p>
+            <div class="booking-identity-documents-slot"></div>
           </div>
         `
       });
+      void renderBookingIdentityDocuments(leaseModal.querySelector('.booking-identity-documents-slot'), entry.id);
       openModal(leaseModal);
+      return;
+    }
+
+    if (button.dataset.action === 'end-stay') {
+      const confirmed = await confirmDialog({
+        title: 'Mark stay as ended?',
+        message: 'This will end the active booking and permanently delete the tenant ID documents.',
+        confirmLabel: 'End stay',
+        variant: 'danger'
+      });
+      if (!confirmed) return;
+      button.disabled = true;
+      try {
+        const response = await fetch(`${API}/bookings/${encodeURIComponent(entry.id)}/status`, {
+          method: 'PATCH',
+          headers: { ...auth(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' })
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.message || 'Unable to end this stay.');
+        await loadTenants();
+        showToast({ message: 'Stay ended and ID documents deleted.', type: 'success' });
+      } catch (error) {
+        showToast({ message: error.message, type: 'error' });
+        button.disabled = false;
+      }
       return;
     }
 

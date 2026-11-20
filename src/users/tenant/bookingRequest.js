@@ -90,6 +90,29 @@ export function bookingRequestMarkup() {
 			</dl>
 			<button type="button" class="dashboard-edit-request">Edit request</button>
 		</section>
+		<section class="dashboard-id-verification" aria-labelledby="dashboard-id-heading" hidden>
+			<h4 id="dashboard-id-heading">Verify your identity</h4>
+			<p>Upload the front and back of a valid government-issued ID. The listing owner and DormHive administrators can review it. It will be deleted when the booking ends.</p>
+			<label for="booking-id-type">ID type</label>
+			<select id="booking-id-type" name="idType" disabled>
+				<option value="">Choose an ID type</option>
+				<option value="philid">PhilID / National ID</option>
+				<option value="passport">Passport</option>
+				<option value="drivers_license">Driver's License</option>
+				<option value="umid">UMID</option>
+				<option value="other">Other government-issued ID</option>
+			</select>
+			<div class="dashboard-id-verification__files">
+				<label for="booking-id-front">Front of ID (JPEG, PNG, or PDF; max 5 MB)</label>
+				<input id="booking-id-front" name="idFront" type="file" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" disabled>
+				<label for="booking-id-back">Back of ID (JPEG, PNG, or PDF; max 5 MB)</label>
+				<input id="booking-id-back" name="idBack" type="file" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" disabled>
+			</div>
+			<label class="dashboard-id-verification__consent">
+				<input type="checkbox" name="idShareConsent" disabled>
+				<span>I consent to share this ID with the listing owner and DormHive administrators for this request.</span>
+			</label>
+		</section>
 		<div class="dashboard-request-actions">
 			<button type="button" class="dashboard-chat-owner">Chat Owner</button>
 			<button type="submit" class="dashboard-send-request">Send Request</button>
@@ -113,7 +136,28 @@ export function attachBookingRequestForm(modal, property) {
 	const nextMonthButton = form.querySelector('.dashboard-calendar-next');
 	const occupantsInput = form.querySelector('[name="occupants"]');
 	const reviewPanel = form.querySelector('.dashboard-request-review');
+	const identitySection = form.querySelector('.dashboard-id-verification');
+	const idTypeInput = form.querySelector('[name="idType"]');
+	const idFrontInput = form.querySelector('[name="idFront"]');
+	const idBackInput = form.querySelector('[name="idBack"]');
+	const idShareConsent = form.querySelector('[name="idShareConsent"]');
 	const submitButton = form.querySelector('.dashboard-send-request');
+	const showAuthenticationRequired = () => {
+		const loginLink = document.createElement('a');
+		loginLink.href = '#/login';
+		loginLink.target = '_blank';
+		loginLink.rel = 'noopener noreferrer';
+		loginLink.textContent = 'Sign in in a new tab';
+		status.replaceChildren(
+			document.createTextNode('Sign in before submitting. Your ID will only be available to you, the listing owner, and authorized admins. '),
+			loginLink
+		);
+	};
+	for (const input of [idTypeInput, idFrontInput, idBackInput, idShareConsent]) {
+		input.addEventListener('change', () => {
+			status.textContent = '';
+		});
+	}
 	const guestCounts = { adults: 1, children: 0, infants: 0, pets: 0 };
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -131,6 +175,13 @@ export function attachBookingRequestForm(modal, property) {
 		}
 	};
 	let isReviewingRequest = false;
+	const setIdentityStepEnabled = (enabled) => {
+		identitySection.hidden = !enabled;
+		for (const input of [idTypeInput, idFrontInput, idBackInput, idShareConsent]) {
+			input.disabled = !enabled;
+			input.required = enabled;
+		}
+	};
 	const renderCalendar = () => {
 		calendarMonth.textContent = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(displayedMonth);
 		previousMonthButton.disabled = displayedMonth.getFullYear() === today.getFullYear() && displayedMonth.getMonth() === today.getMonth();
@@ -204,6 +255,7 @@ export function attachBookingRequestForm(modal, property) {
 	form.querySelector('.dashboard-edit-request').addEventListener('click', () => {
 		isReviewingRequest = false;
 		reviewPanel.hidden = true;
+		setIdentityStepEnabled(false);
 		submitButton.textContent = 'Send Request';
 		status.textContent = '';
 	});
@@ -215,6 +267,10 @@ export function attachBookingRequestForm(modal, property) {
 	});
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
+		if (!api.session.token) {
+			showAuthenticationRequired();
+			return;
+		}
 		if (!form.reportValidity()) return;
 		if (!moveIn.value) {
 			status.textContent = 'Choose a move-in date.';
@@ -227,29 +283,44 @@ export function attachBookingRequestForm(modal, property) {
 		if (!isReviewingRequest) {
 			updateReview();
 			reviewPanel.hidden = false;
-			reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			setIdentityStepEnabled(true);
+			identitySection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 			isReviewingRequest = true;
 			submitButton.textContent = 'Confirm & Send Request';
-			status.textContent = 'Review your request details, then confirm to send.';
+			status.textContent = '';
 			return;
 		}
+		for (const input of [idFrontInput, idBackInput]) {
+			const file = input.files[0];
+			if (file && file.size > 5 * 1024 * 1024) {
+				status.textContent = 'Each ID image must be 5 MB or smaller.';
+				input.focus();
+				return;
+			}
+		}
 		submitButton.disabled = true;
+		status.textContent = 'Submitting your rental request…';
 		try {
-			await api.bookings.create({
-				propertyId: Number(property.id),
-				moveInDate: moveIn.value,
-				moveOutDate: indefiniteMoveOut.checked ? null : moveOut.value || null,
-				isIndefiniteMoveOut: indefiniteMoveOut.checked,
-				occupants: Number(occupantsInput.value || 1),
-				message: `Adults: ${guestCounts.adults}; Children: ${guestCounts.children}; Infants: ${guestCounts.infants}; Pets: ${guestCounts.pets}.`
-			});
+			const payload = new FormData();
+			payload.set('propertyId', String(Number(property.id)));
+			payload.set('moveInDate', moveIn.value);
+			payload.set('moveOutDate', indefiniteMoveOut.checked ? '' : moveOut.value || '');
+			payload.set('isIndefiniteMoveOut', String(indefiniteMoveOut.checked));
+			payload.set('occupants', String(Number(occupantsInput.value || 1)));
+			payload.set('message', `Adults: ${guestCounts.adults}; Children: ${guestCounts.children}; Infants: ${guestCounts.infants}; Pets: ${guestCounts.pets}.`);
+			payload.set('idType', idTypeInput.value);
+			payload.set('idShareConsent', String(idShareConsent.checked));
+			payload.set('idFront', idFrontInput.files[0]);
+			payload.set('idBack', idBackInput.files[0]);
+			await api.bookings.create(payload);
 			modal.close();
 			await successDialog(
 				"Your request has been submitted and is pending the property owner's review.",
-				'Request submitted'
+				'Request Submitted Successfully'
 			);
 		} catch (error) {
-			status.textContent = error.message || 'Unable to submit booking request.';
+			if (error.status === 401) showAuthenticationRequired();
+			else status.textContent = error.message || 'Unable to submit booking request.';
 			submitButton.disabled = false;
 		}
 	});

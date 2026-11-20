@@ -88,11 +88,6 @@ export async function renderRegister(root = document.querySelector('#app')) {
               </div>
             </div>
             <input id="role" name="role" type="hidden" value="tenant">
-            <fieldset class="role-choice-group">
-              <legend>I want to</legend>
-              <label class="role-choice"><input type="checkbox" data-role-choice="tenant" checked><span>Find a rental</span></label>
-              <label class="role-choice"><input type="checkbox" data-role-choice="owner"><span>List a property</span></label>
-            </fieldset>
             <div class="input-box"><input id="password_r" name="password" type="password" placeholder="Password" required minlength="8"><button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false"><i class='bx bx-show' aria-hidden="true"></i></button></div>
             <div class="input-box"><input id="confirm_password" name="confirmPassword" type="password" placeholder="Confirm password" required minlength="8"><button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false"><i class='bx bx-show' aria-hidden="true"></i></button></div>
             ${oauthButtonsMarkup('register')}
@@ -157,28 +152,12 @@ export async function renderRegister(root = document.querySelector('#app')) {
       emailInput.value = registration.email;
       emailInput.readOnly = true;
       roleInput.value = registration.role;
-      root.querySelectorAll('[data-role-choice]').forEach((choice) => {
-        choice.checked = choice.dataset.roleChoice === registration.role;
-        choice.disabled = true;
-      });
     } else {
       oauthRegistrationToken = '';
       sessionStorage.removeItem('dormhive.oauthRegistrationToken');
       showMessage(message, 'Your social registration session expired. Start registration again.');
     }
   }
-  root.querySelectorAll('[data-role-choice]').forEach((choice) => {
-    choice.addEventListener('change', () => {
-      if (!choice.checked) {
-        choice.checked = true;
-        return;
-      }
-      root.querySelectorAll('[data-role-choice]').forEach((otherChoice) => {
-        if (otherChoice !== choice) otherChoice.checked = false;
-      });
-      roleInput.value = choice.dataset.roleChoice;
-    });
-  });
   root.querySelectorAll('.checkbox-label a[href="#/terms"], .checkbox-label a[href="#/privacy"]').forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
@@ -271,12 +250,7 @@ export async function renderRegister(root = document.querySelector('#app')) {
       localStorage.setItem('dormhive.accessToken', body.accessToken);
       localStorage.setItem('dormhive.user', JSON.stringify(body.user));
       const destinations = { tenant: '/tenant/dashboardTenant', owner: '/owner/dashboardOwner', admin: '/admin/dashboardAdmin' };
-      if (body.firstLogin && body.user.role === 'tenant') {
-        const destination = await showFirstLoginWelcome(body.user);
-        window.location.assign(`#${destination}`);
-      } else {
-        window.location.assign(`#${destinations[body.user.role] ?? '/'}`);
-      }
+      window.location.assign(`#${destinations[body.user.role] ?? '/'}`);
     } catch (error) {
       showMessage(loginMessage, error instanceof TypeError ? 'Unable to reach the sign-in service. Please check that the backend is running.' : error.message);
       loginSubmitButton.disabled = false;
@@ -317,6 +291,7 @@ export async function renderRegister(root = document.querySelector('#app')) {
       const body = await readApiResponse(response);
       if (!response.ok) throw new Error(getApiErrorMessage(body, 'Unable to create your account.'));
       sessionStorage.removeItem('dormhive.oauthRegistrationToken');
+      await showFirstLoginWelcome(body.user, body.onboardingToken);
       showToast({ message: 'Account created. You can sign in after admin review.', type: 'success' });
       navigate('/login', true);
     } catch (error) {

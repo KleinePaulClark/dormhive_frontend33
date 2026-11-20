@@ -688,6 +688,44 @@ textarea:focus-visible {
   cursor: wait;
 }
 
+.booking-identity-admin-list {
+  display: grid;
+  gap: 14px;
+}
+
+.booking-identity-admin-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--users-line);
+  border-radius: 10px;
+  background: #f7fafb;
+}
+
+.booking-identity-admin-item h3 {
+  margin: 0;
+  color: var(--users-ink);
+  font-size: 14px;
+}
+
+.booking-identity-admin-modal .booking-identity-documents {
+  margin-top: 0;
+}
+
+.booking-identity-admin-modal .booking-identity-preview img {
+  display: block;
+  max-width: min(78vw, 820px);
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.booking-identity-admin-modal .booking-identity-preview iframe {
+  display: block;
+  width: min(78vw, 820px);
+  height: 70vh;
+  border: 0;
+}
+
 @media (max-width: 680px) {
   .ui-modal.verification-review-modal {
     width: calc(100vw - 1rem);
@@ -737,15 +775,18 @@ textarea:focus-visible {
 }
 
 .user-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   min-width: 0;
 }
 
 .user-actions .user-status-button {
-  flex: 1 1 0;
+  width: 100%;
+}
+
+.user-actions .booking-identity-review-button {
+  grid-column: 1 / -1;
 }
 
 .archive-tabs {

@@ -25,9 +25,11 @@ export async function showFirstLoginWelcome(user, onboardingToken) {
   greeting.textContent = `Hi, ${firstName}!`;
   const question = document.createElement('p');
   question.className = 'first-login-welcome__question';
-  question.textContent = 'How would you like to get started?';
+  question.textContent = 'Choose one option to continue.';
   const choices = document.createElement('div');
   choices.className = 'first-login-welcome__choices';
+  choices.setAttribute('role', 'group');
+  choices.setAttribute('aria-label', 'Choose your account role');
   const ownerButton = choiceButton('List your property', 'Reach people looking for a place to stay.', 'first-login-welcome__choice--owner');
   const tenantButton = choiceButton('Find a place to stay', 'Explore available rental listings.', 'first-login-welcome__choice--tenant');
   const errorMessage = document.createElement('p');
@@ -37,37 +39,59 @@ export async function showFirstLoginWelcome(user, onboardingToken) {
   choices.append(ownerButton, tenantButton);
   content.append(greeting, question, choices, errorMessage);
 
+  const okayButton = document.createElement('button');
+  okayButton.type = 'button';
+  okayButton.textContent = 'Okay';
+  okayButton.disabled = true;
   const modal = createModal({
     title: 'Welcome to DormHive',
     content,
-    closeLabel: 'Not now',
-    closeOnBackdrop: false
+    closeLabel: null,
+    footerMarkup: okayButton.outerHTML,
+    closeOnBackdrop: false,
+    showCloseButton: false,
+    closeOnHashChange: false
   });
   modal.classList.add('ui-first-login-welcome');
 
-  const choicesByRole = { owner: ownerButton, tenant: tenantButton };
+  const confirmationButton = modal.querySelector('.ui-modal__footer button');
+  let selectedRole = '';
+  modal.addEventListener('cancel', (event) => event.preventDefault());
   const closed = new Promise((resolve) => {
     modal.addEventListener('close', () => resolve('/login'), { once: true });
   });
   const saveRole = async (role) => {
-    const selectedButton = choicesByRole[role];
     ownerButton.disabled = true;
     tenantButton.disabled = true;
-    ownerButton.setAttribute('aria-pressed', String(selectedButton === ownerButton));
-    tenantButton.setAttribute('aria-pressed', String(selectedButton === tenantButton));
+    confirmationButton.disabled = true;
     errorMessage.hidden = true;
     try {
-      await api.auth.setRegistrationRole(onboardingToken, role);
+      if (onboardingToken) {
+        await api.auth.setRegistrationRole(onboardingToken, role);
+      } else if (role === 'owner') {
+        await api.auth.becomeOwner();
+      }
       modal.close();
     } catch (error) {
       errorMessage.textContent = error.message;
       errorMessage.hidden = false;
       ownerButton.disabled = false;
       tenantButton.disabled = false;
+      confirmationButton.disabled = false;
     }
   };
-  tenantButton.addEventListener('click', () => saveRole('tenant'));
-  ownerButton.addEventListener('click', () => saveRole('owner'));
+  const selectRole = (role) => {
+    selectedRole = role;
+    ownerButton.setAttribute('aria-pressed', String(role === 'owner'));
+    tenantButton.setAttribute('aria-pressed', String(role === 'tenant'));
+    confirmationButton.disabled = false;
+    errorMessage.hidden = true;
+  };
+  tenantButton.addEventListener('click', () => selectRole('tenant'));
+  ownerButton.addEventListener('click', () => selectRole('owner'));
+  confirmationButton.addEventListener('click', () => {
+    if (selectedRole) saveRole(selectedRole);
+  });
 
   await openModal(modal);
   tenantButton.focus();

@@ -3,6 +3,7 @@ import { applyAdminPrivacy } from './privacy.js';
 import { resolveUserAvatarUrl } from './avatar.js';
 import { showToast } from '../../components/toast.js';
 import { confirmDialog, createModal, openModal, successDialog, warningDialog } from '../../components/modal.js';
+import { renderBookingIdentityDocuments } from '../../services/bookingIdentity.js';
 
 const API = window.DORMHIVE_API_URL ?? 'http://localhost:5000/api/v1';
 const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('dormhive.accessToken') ?? ''}` });
@@ -153,6 +154,37 @@ export async function renderUserManagement(root = document.querySelector('#app')
     await openModal(modal);
   };
 
+  const openBookingIdentityDocuments = async (user) => {
+    const response = await fetch(`${API}/bookings`, { headers: headers(), cache: 'no-store' });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || 'Unable to load tenant booking requests.');
+    const userBookings = (Array.isArray(result.data) ? result.data : [])
+      .filter((booking) => Number(booking.tenant_id) === Number(user.id));
+    const content = document.createElement('div');
+    content.className = 'booking-identity-admin-list';
+    if (!userBookings.length) {
+      const empty = document.createElement('p');
+      empty.textContent = 'This tenant has no rental requests.';
+      content.append(empty);
+    }
+    for (const booking of userBookings) {
+      const item = document.createElement('section');
+      item.className = 'booking-identity-admin-item';
+      const heading = document.createElement('h3');
+      heading.textContent = `${booking.property_title || 'Property'} · ${booking.status || 'Request'}`;
+      const documentSlot = document.createElement('div');
+      item.append(heading, documentSlot);
+      content.append(item);
+      void renderBookingIdentityDocuments(documentSlot, booking.id);
+    }
+    const modal = createModal({
+      title: `Rental request IDs — ${user.name || 'Tenant'}`,
+      content
+    });
+    modal.classList.add('booking-identity-admin-modal');
+    await openModal(modal);
+  };
+
   const load = async () => {
     try {
       const query = new URLSearchParams({
@@ -206,7 +238,7 @@ export async function renderUserManagement(root = document.querySelector('#app')
         const accountStatus = verification === 'pending' ? 'Pending review' : verification === 'rejected' ? 'Rejected' : active ? 'Active' : 'Suspended';
         const statusClass = verification === 'pending' ? 'pending' : verification === 'rejected' || !active ? 'suspended' : 'active';
         const accountActions = verification === 'approved'
-          ? `<div class="user-actions"><button class="user-status-button" data-id="${esc(user.id)}" data-status="${active ? 'suspended' : 'active'}" ${disableAction ? 'disabled title="Admin accounts cannot be suspended from this panel."' : ''}>${disableAction ? 'Locked' : (active ? 'Suspend' : 'Activate')}</button>${canArchive ? `<button class="user-status-button user-archive-button" data-archive-id="${esc(user.id)}" ${disableAction ? 'disabled title="You cannot archive your own account."' : ''}>Archive</button>` : ''}</div>`
+          ? `<div class="user-actions"><button class="user-status-button" data-id="${esc(user.id)}" data-status="${active ? 'suspended' : 'active'}" ${disableAction ? 'disabled title="Admin accounts cannot be suspended from this panel."' : ''}>${disableAction ? 'Locked' : (active ? 'Suspend' : 'Activate')}</button>${canArchive ? `<button class="user-status-button user-archive-button" data-archive-id="${esc(user.id)}" ${disableAction ? 'disabled title="You cannot archive your own account."' : ''}>Archive</button>` : ''}${user.role === 'tenant' ? `<button class="user-status-button booking-identity-review-button" type="button" data-booking-identity-user-id="${esc(user.id)}">Request IDs</button>` : ''}</div>`
           : verification === 'pending'
             ? `<div class="user-actions"><button class="verification-review-button" data-verification-review-id="${esc(user.id)}"><i class="bi bi-card-checklist" aria-hidden="true"></i>Review</button></div>`
             : '—';
@@ -224,8 +256,20 @@ export async function renderUserManagement(root = document.querySelector('#app')
           button.disabled = false;
         }
       }));
+      body.querySelectorAll('.booking-identity-review-button').forEach((button) => button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          const user = users.find((item) => String(item.id) === button.dataset.bookingIdentityUserId);
+          if (user) await openBookingIdentityDocuments(user);
+        } catch (error) {
+          showToast({ message: error.message, type: 'error' });
+        } finally {
+          button.disabled = false;
+        }
+      }));
       body.querySelectorAll('.user-status-button').forEach((button) => button.addEventListener('click', async () => {
         if (button.disabled) return;
+        if (button.dataset.bookingIdentityUserId) return;
         if (button.dataset.archiveId) {
           const confirmed = await confirmDialog({
             title: 'Archive account?',

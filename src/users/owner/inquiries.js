@@ -1,5 +1,6 @@
 import { ensureOwnerSidebarStyles, loadOwnerStylesheet, renderOwnerSidebar, updateListingCountsInSidebar } from './sidebarOwner.js';
 import { withMediaAccessToken } from '../../services/mediaAccess.js';
+import { renderBookingIdentityDocuments } from '../../services/bookingIdentity.js';
 
 const API = window.DORMHIVE_API_URL ?? 'http://localhost:5000/api/v1';
 const API_ORIGIN = API.replace(/\/api\/v1\/?$/, '');
@@ -31,6 +32,7 @@ function css() {
 const statusInfo = (status) => {
   const normalized = String(status ?? '').toLowerCase();
   if (normalized === 'approved') return { label: 'Replied', className: 'status-replied' };
+  if (normalized === 'completed') return { label: 'Completed', className: 'status-archived' };
   if (normalized === 'rejected') return { label: 'Rejected', className: 'status-archived' };
   if (normalized === 'cancelled') return { label: 'Archived', className: 'status-archived' };
   if (normalized === 'pending') return { label: 'Pending', className: 'status-pending' };
@@ -230,7 +232,7 @@ export async function renderInquiries(root = document.querySelector('#app')) {
     const query = state.search.trim().toLowerCase();
     return state.bookings.filter((booking) => {
       const normalizedStatus = String(booking.status ?? '').toLowerCase();
-      if (normalizedStatus === 'approved') return false;
+      if (normalizedStatus === 'approved' || normalizedStatus === 'completed') return false;
 
       const matchesSearch = !query || `${booking.tenant_name ?? ''} ${booking.property_title ?? ''} ${booking.message ?? ''}`.toLowerCase().includes(query);
       const matchesStatus = state.statusFilter === 'all'
@@ -359,11 +361,15 @@ export async function renderInquiries(root = document.querySelector('#app')) {
         </div>
       </div>
 
+      <div class="booking-identity-documents-slot"></div>
+
       <div class="detail-actions">
         <button type="button" class="accept-action">Accept Tenant</button>
         <button type="button" class="secondary-btn reject-tenant-panel-action">Reject Tenant</button>
       </div>
     `;
+
+    void renderBookingIdentityDocuments(detailPanel.querySelector('.booking-identity-documents-slot'), booking.id);
 
     const moreMenuButton = detailPanel.querySelector('.more-menu');
     const detailMenu = detailPanel.querySelector('.detail-menu');

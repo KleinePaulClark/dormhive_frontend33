@@ -22,13 +22,15 @@ function style() {
 	return stylesheetPromise;
 }
 
-export function createModal({ title = '', content = '', closeLabel = 'Close', footerMarkup = '', closeOnBackdrop = true } = {}) {
+export function createModal({ title = '', content = '', closeLabel = 'Close', footerMarkup = '', closeOnBackdrop = true, showCloseButton = true, closeOnHashChange = true } = {}) {
 	style();
 	document.querySelectorAll('.ui-modal').forEach((existing) => existing.remove());
 	const dialog = document.createElement('dialog');
 	dialog.className = 'ui-modal';
-	const cancelClass = String(closeLabel).trim().toLowerCase() === 'cancel' ? ' class="ui-modal__cancel-button"' : '';
-	dialog.innerHTML = `<div class="ui-modal__header"><h2>${title}</h2><button type="button" aria-label="Close dialog" data-modal-close>×</button></div><div class="ui-modal__body"></div><div class="ui-modal__footer">${footerMarkup}<button type="button"${cancelClass} data-modal-close>${closeLabel}</button></div>`;
+	const cancelClass = String(closeLabel ?? '').trim().toLowerCase() === 'cancel' ? ' class="ui-modal__cancel-button"' : '';
+	const headerCloseButton = showCloseButton ? '<button type="button" aria-label="Close dialog" data-modal-close>×</button>' : '';
+	const footerCloseButton = closeLabel === null ? '' : `<button type="button"${cancelClass} data-modal-close>${closeLabel}</button>`;
+	dialog.innerHTML = `<div class="ui-modal__header"><h2>${title}</h2>${headerCloseButton}</div><div class="ui-modal__body"></div><div class="ui-modal__footer">${footerMarkup}${footerCloseButton}</div>`;
 	const body = dialog.querySelector('.ui-modal__body');
 	typeof content === 'string' ? body.innerHTML = content : body.append(content);
 	let closing = false;
@@ -49,7 +51,7 @@ export function createModal({ title = '', content = '', closeLabel = 'Close', fo
 		});
 	}
 	dialog.addEventListener('close', remove, { once: true });
-	window.addEventListener('hashchange', close);
+	if (closeOnHashChange) window.addEventListener('hashchange', close);
 	document.body.append(dialog);
 	return dialog;
 }

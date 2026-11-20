@@ -576,6 +576,64 @@ textarea {
   margin-top: 20px;
 }
 
+.booking-identity-documents {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #dce8e3;
+  border-radius: 12px;
+  background: #f7faf8;
+}
+
+.booking-identity-documents h3 {
+  margin: 0;
+  color: var(--dormhive-dark);
+  font-size: 1rem;
+}
+
+.booking-identity-documents p {
+  margin: 0;
+  color: var(--dormhive-muted);
+  font-size: .85rem;
+}
+
+.booking-identity-documents__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.booking-identity-documents__actions button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #c7ddd2;
+  border-radius: 8px;
+  background: #fff;
+  color: #18735a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.booking-identity-documents__actions button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.booking-identity-preview img {
+  display: block;
+  max-width: min(78vw, 820px);
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.booking-identity-preview iframe {
+  display: block;
+  width: min(78vw, 820px);
+  height: 70vh;
+  border: 0;
+}
+
 .primary-btn,
 .secondary-btn,
 .accept-action {

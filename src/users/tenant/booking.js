@@ -151,6 +151,7 @@ const getSearchParam = (name) => {
 };
 const statusLabel = (status) => {
   if (status === 'approved') return { label: 'Confirmed', className: 'status-confirmed' };
+  if (status === 'completed') return { label: 'Completed', className: 'status-archived' };
   if (status === 'pending') return { label: 'Upcoming', className: 'status-upcoming' };
   if (status === 'cancelled' || status === 'rejected') return { label: 'Archived', className: 'status-archived' };
   return { label: 'Pending', className: 'status-pending' };
@@ -358,6 +359,7 @@ export async function renderBooking(root = document.querySelector('#app')) {
   const getProperty = (booking) => state.properties.find((item) => String(item.id) === String(booking.property_id)) || null;
   const statusPill = (status) => {
     if (status === 'approved') return { label: 'Confirmed', cls: 'pill--green' };
+    if (status === 'completed') return { label: 'Completed', cls: 'pill--grey' };
     if (status === 'pending') return { label: 'Pending Approval', cls: 'pill--amber' };
     return { label: 'Past', cls: 'pill--grey' };
   };
@@ -377,7 +379,7 @@ export async function renderBooking(root = document.querySelector('#app')) {
     const filtered = state.bookings.filter((booking) => {
       if (state.filter === 'all') return true;
       if (state.filter === 'upcoming') return booking.status === 'approved' && (new Date(booking.move_in_date) >= today || !booking.move_in_date);
-      if (state.filter === 'past') return isPast(booking) || booking.status === 'cancelled' || booking.status === 'rejected';
+      if (state.filter === 'past') return isPast(booking) || ['cancelled', 'rejected', 'completed'].includes(booking.status);
       if (state.filter === 'pending') return booking.status === 'pending';
       return true;
     });

@@ -92,6 +92,11 @@
   border-color: #1aa87a;
   outline: 2px solid rgb(26 168 122 / 18%);
 }
+.first-login-welcome__choice[aria-pressed="true"] {
+  border-color: #1aa87a;
+  background: #e7f8f2;
+  box-shadow: 0 0 0 2px rgb(26 168 122 / 18%);
+}
 .first-login-welcome__choice-title {
   font: inherit;
   font-weight: 700;
@@ -167,6 +172,10 @@
   color: #fff;
   font-weight: 700;
   cursor: pointer;
+}
+.ui-first-login-welcome .ui-modal__footer button:disabled {
+  background: #9ab8ad;
+  cursor: not-allowed;
 }
 
 .ui-modal.ui-confirm-dialog {
