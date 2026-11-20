@@ -1110,6 +1110,13 @@ export async function renderMyListing(root = document.querySelector('#app')) {
         securityDepositInput.reportValidity();
         return false;
       }
+      const advancePaymentMonthsInput = propertyForm.elements.advancePaymentMonths;
+      if (!advancePaymentMonthsInput.checkValidity()) {
+        setFormMessage('Advance payment must be a whole number from 0 to 12 months.');
+        advancePaymentMonthsInput.focus();
+        advancePaymentMonthsInput.reportValidity();
+        return false;
+      }
       if (rentalArrangement === 'shared' && (!totalSlots || !Number.isInteger(Number(totalSlots)) || Number(totalSlots) < 1)) {
         setFormMessage('Please enter a valid number of rental slots.');
         return false;
@@ -1206,6 +1213,7 @@ export async function renderMyListing(root = document.querySelector('#app')) {
       ['Monthly price', `PHP ${propertyForm.elements.monthlyRent.value || '0'} ${rentBasisSelect.value === 'per_slot' ? 'per slot / month' : '/ month'}`],
       ['Maximum occupants', propertyForm.elements.maxOccupants.value],
       ['Maximum rentable slots', rentalArrangementSelect.value === 'shared' ? propertyForm.elements.totalSlots.value : '1 (exclusive space)'],
+      ['Advance payment', propertyForm.elements.advancePaymentMonths.value === '' ? 'Not specified' : `${propertyForm.elements.advancePaymentMonths.value} months`],
       ['Gender preference', propertyForm.elements.genderPreference.selectedOptions[0]?.textContent || 'Not specified'],
       ['Location', [propertyForm.elements.address.value, propertyForm.elements.barangay.value, propertyForm.elements.municipality.value].filter(Boolean).join(', ')],
       ['Ownership proof', ownershipProofInput.files[0]?.name || (propertyForm.dataset.hasOwnershipProof === 'true' ? 'Existing proof on file (private)' : 'Missing')],
@@ -1695,7 +1703,7 @@ export async function renderMyListing(root = document.querySelector('#app')) {
 
   propertyForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (currentFormStep !== 4 || !validateStep(3)) return;
+    if (currentFormStep !== 4 || !validateStep(1) || !validateStep(3)) return;
     const formData = new FormData(propertyForm);
     formData.set('monthlyRent', String(formData.get('monthlyRent') ?? '').replace(/,/g, ''));
     formData.set('securityDeposit', String(formData.get('securityDeposit') ?? '').replace(/,/g, ''));
