@@ -490,33 +490,6 @@ form {
   gap: 10px;
 }
 
-.google-oauth-slot {
-  display: flex;
-  width: 100%;
-  height: 40px;
-  min-width: 0;
-  align-items: center;
-  justify-content: center;
-}
-
-.google-oauth-slot .S9gUrf-YoZ4jf,
-.google-oauth-slot .S9gUrf-YoZ4jf * {
-  box-sizing: content-box;
-}
-
-.google-oauth-slot > .S9gUrf-YoZ4jf {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.google-oauth-slot [role="button"] {
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
 .social-icons a {
   display: inline-flex;
   padding: 10px;
@@ -552,9 +525,11 @@ form {
     opacity 0.2s ease;
 }
 
-.social-icons .oauth-button > i {
-  color: #1877f2;
-  font-size: 20px;
+.social-icons .oauth-google-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
 }
 
 .social-icons button:hover:not(:disabled) {
