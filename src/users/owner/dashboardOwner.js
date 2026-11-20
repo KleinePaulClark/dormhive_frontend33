@@ -577,6 +577,7 @@ export async function renderDashboardOwner(root = document.querySelector('#app')
   if (!root) throw new Error('Owner dashboard requires #app.');
   clearTenantRouteStyles();
   await Promise.all([css(), ensureOwnerSidebarStyles()]);
+  if (location.hash.split('?')[0] !== '#/owner/dashboardOwner') return;
   const user = session();
   const profileName = user.name || 'Owner';
   const profileInitials = profileName
@@ -700,6 +701,8 @@ export async function renderDashboardOwner(root = document.querySelector('#app')
         </div>
       </section>
     </div>`;
+  const dashboardPage = root.querySelector('.owner-dashboard');
+  const isDashboardMounted = () => Boolean(dashboardPage?.isConnected && root.contains(dashboardPage));
   const shell = root.querySelector('.owner-shell');
   const listingGrid = root.querySelector('.listings-card-grid');
   const ownerWelcome = root.querySelector('[data-owner-welcome]');
@@ -934,6 +937,7 @@ export async function renderDashboardOwner(root = document.querySelector('#app')
     }
   });
   Promise.all([get('/properties?limit=100').catch(() => ({ data: [] })), get('/bookings').catch(() => ({ data: [] }))]).then(async ([properties, bookings]) => {
+    if (!isDashboardMounted()) return;
     const items = (properties.data ?? []).filter((item) => Number(item.owner_id) === Number(user.id));
     const approvedListings = items.filter((item) => String(item.status).toLowerCase() === 'approved');
     const listingPhotoSets = new Map();
@@ -1031,7 +1035,9 @@ export async function renderDashboardOwner(root = document.querySelector('#app')
     // Initialize Leaflet map with the owner's properties (pixel-accurate markers)
     try {
       await ensureLeafletLoaded();
+      if (!isDashboardMounted()) return;
       await new Promise(resolve => setTimeout(resolve, 300)); // Wait for CSS to load
+      if (!isDashboardMounted()) return;
       
       const mapPanel = root.querySelector('.map-panel');
       if (mapPanel && window.L) {
@@ -1117,8 +1123,11 @@ export async function renderDashboardOwner(root = document.querySelector('#app')
       // eslint-disable-next-line no-console
       console.warn('Failed to initialize owner map', err);
     }
+    if (!isDashboardMounted()) return;
     await updateListingCountsInSidebar();
   }).catch((error) => {
-    root.querySelector('.table-wrap').innerHTML = `<p class="status-message">${escape(error.message)}</p>`;
+    if (!isDashboardMounted()) return;
+    const tableWrap = dashboardPage.querySelector('.table-panel .table-wrap');
+    if (tableWrap) tableWrap.innerHTML = `<p class="status-message">${escape(error.message)}</p>`;
   });
 }
