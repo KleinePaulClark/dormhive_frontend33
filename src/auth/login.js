@@ -3,7 +3,6 @@ import { showToast } from '../components/toast.js';
 import { openLegalModal } from './legal.js';
 import { navigate } from '../../router.js';
 import { getApiErrorMessage, readApiResponse } from '../services/api.js';
-import { bindOAuthButtons, oauthButtonsMarkup } from './oauth.js';
 import { showFirstLoginWelcome } from './firstLoginWelcome.js';
 
 function loadStylesheet() {
@@ -65,7 +64,6 @@ export async function renderLogin(root = document.querySelector('#app')) {
             <div class="input-box"><input id="password" name="password" type="password" placeholder="Password" autocomplete="new-password" required minlength="8"><button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false"><i class='bx bx-show' aria-hidden="true"></i></button></div>
             <div class="forgot-link"><a href="#/forgot-password">Forgot Password?</a></div>
             <button class="btn auth-submit" type="submit">Login</button>
-            ${oauthButtonsMarkup('login')}
           </div>
         </form>
       </div>
@@ -95,7 +93,6 @@ export async function renderLogin(root = document.querySelector('#app')) {
             <input id="role" name="role" type="hidden" value="tenant">
             <div class="input-box"><input id="password_r" name="password" type="password" placeholder="Password" required minlength="8"><button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false"><i class='bx bx-show' aria-hidden="true"></i></button></div>
             <div class="input-box"><input id="confirm_password" name="confirmPassword" type="password" placeholder="Confirm password" required minlength="8"><button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false"><i class='bx bx-show' aria-hidden="true"></i></button></div>
-            ${oauthButtonsMarkup('register')}
             <label class="checkbox-label"><input name="terms" type="checkbox" required> I agree to the <a href="#/terms">Terms and conditions</a>.</label>
             <button class="btn auth-submit" type="submit">Create account</button>
           </div>
@@ -138,7 +135,6 @@ export async function renderLogin(root = document.querySelector('#app')) {
   const loginSubmitButton = root.querySelector('.form-box.login .auth-submit');
   const registerSubmitButton = root.querySelector('.form-box.register .auth-submit');
   const phoneInput = root.querySelector('#phone_r');
-  bindOAuthButtons(root);
   const authBrand = root.querySelector('.auth-brand');
   const brandName = authBrand?.querySelector('.auth-brand-name');
   const cornerBrand = root.querySelector('.auth-corner-brand');
